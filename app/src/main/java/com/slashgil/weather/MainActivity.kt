@@ -4,7 +4,6 @@ import android.Manifest
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -16,7 +15,6 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.animation.doOnEnd
-import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -51,14 +49,11 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition { !isReady }
 
         splashScreen.setOnExitAnimationListener { splashScreenView ->
-            val scaleX = ObjectAnimator.ofFloat(splashScreenView.iconView, View.SCALE_X, 1f, 1.2f)
-            val scaleY = ObjectAnimator.ofFloat(splashScreenView.iconView, View.SCALE_Y, 1f, 1.2f)
             val fadeOut = ObjectAnimator.ofFloat(splashScreenView.view, View.ALPHA, 1f, 0f)
-
             AnimatorSet().apply {
                 duration = 350L
                 interpolator = AccelerateDecelerateInterpolator()
-                playTogether(scaleX, scaleY, fadeOut)
+                playTogether(fadeOut)
                 doOnEnd { splashScreenView.remove() }
                 start()
             }
@@ -66,12 +61,14 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        requestPermissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
+        if (savedInstanceState == null) {
+            requestPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
             )
-        )
+        }
 
         setContent {
             WeatherAppTheme {
@@ -104,18 +101,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        val hasFine = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        val hasCoarse = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (hasFine || hasCoarse) {
-            viewModel.refreshForecast()
-        }
+        viewModel.refreshForecast()
     }
 }
