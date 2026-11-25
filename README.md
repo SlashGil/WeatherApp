@@ -98,6 +98,8 @@ com.slashgil.weather
 ./gradlew assembleDebug
 
 # Run All Unit Tests
+./gradlew test
+# or
 ./gradlew testDebugUnitTest
 ```
 
