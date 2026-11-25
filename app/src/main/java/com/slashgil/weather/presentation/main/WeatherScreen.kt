@@ -1,5 +1,7 @@
 package com.slashgil.weather.presentation.main
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +28,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +41,8 @@ import com.slashgil.weather.presentation.main.components.CityInputModal
 import com.slashgil.weather.presentation.main.components.CoordsInputModal
 import com.slashgil.weather.presentation.main.components.EmptyStateView
 import com.slashgil.weather.presentation.main.components.ForecastDayCard
+import com.slashgil.weather.presentation.main.components.SplashScreenContent
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,113 +58,132 @@ fun WeatherScreen(
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
+    var isSplashVisible by remember { mutableStateOf(true) }
 
-    LaunchedEffect(uiState.errorMessage) {
-        val message = uiState.errorMessage
-        if (message != null && uiState.forecast != null) {
-            snackbarHostState.showSnackbar(message)
-            onDismissError()
+    LaunchedEffect(uiState.forecast, uiState.isLoading) {
+        if (uiState.forecast != null || !uiState.isLoading) {
+            delay(800)
+            isSplashVisible = false
         }
     }
 
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text("7-Day Weather") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = onRefresh) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh Forecast"
-                        )
-                    }
-                    if (uiState.isDeveloperModeEnabled) {
-                        IconButton(onClick = onOpenSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Developer Settings"
+    Crossfade(
+        targetState = isSplashVisible,
+        animationSpec = tween(600),
+        label = "SplashToMainCrossfade"
+    ) { showSplash ->
+        if (showSplash) {
+            SplashScreenContent(modifier = modifier)
+        } else {
+            val snackbarHostState = remember { SnackbarHostState() }
+
+            LaunchedEffect(uiState.errorMessage) {
+                val message = uiState.errorMessage
+                if (message != null && uiState.forecast != null) {
+                    snackbarHostState.showSnackbar(message)
+                    onDismissError()
+                }
+            }
+
+            Scaffold(
+                modifier = modifier,
+                topBar = {
+                    TopAppBar(
+                        title = { Text("7-Day Weather") },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        actions = {
+                            IconButton(onClick = onRefresh) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh Forecast"
+                                )
+                            }
+                            if (uiState.isDeveloperModeEnabled) {
+                                IconButton(onClick = onOpenSettings) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Developer Settings"
+                                    )
+                                }
+                            }
+                        }
+                    )
+                },
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+            ) { innerPadding ->
+                PullToRefreshBox(
+                    isRefreshing = uiState.isLoading,
+                    onRefresh = onRefresh,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    when {
+                        uiState.isLoading && uiState.forecast == null -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center)
                             )
                         }
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh = onRefresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when {
-                uiState.isLoading && uiState.forecast == null -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
 
-                uiState.forecast != null -> {
-                    val forecast = uiState.forecast
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
+                        uiState.forecast != null -> {
+                            val forecast = uiState.forecast
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 16.dp)
                             ) {
-                                Text(
-                                    text = forecast.cityName ?: "Current Location",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = DateFormatter.formatLastUpdatedTimestamp(forecast.lastUpdatedTimestamp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp)
+                                    ) {
+                                        Text(
+                                            text = forecast.cityName ?: "Current Location",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = DateFormatter.formatLastUpdatedTimestamp(forecast.lastUpdatedTimestamp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                items(forecast.dailyForecasts) { daily ->
+                                    ForecastDayCard(dailyForecast = daily)
+                                }
                             }
                         }
 
-                        items(forecast.dailyForecasts) { daily ->
-                            ForecastDayCard(dailyForecast = daily)
+                        else -> {
+                            EmptyStateView(
+                                onDoubleTap = onEnableDeveloperMode
+                            )
                         }
                     }
+
+                    if (uiState.showCoordsModal) {
+                        CoordsInputModal(
+                            errorMessage = uiState.modalErrorMessage,
+                            onDismiss = onDismissCoordsModal,
+                            onSubmit = onSubmitCoords
+                        )
+                    }
+
+                    if (uiState.showCityModal) {
+                        CityInputModal(
+                            isLoading = uiState.isModalLoading,
+                            errorMessage = uiState.modalErrorMessage,
+                            onDismiss = onDismissCityModal,
+                            onSubmit = onSubmitCityQuery
+                        )
+                    }
                 }
-
-                else -> {
-                    EmptyStateView(
-                        onDoubleTap = onEnableDeveloperMode
-                    )
-                }
-            }
-
-            if (uiState.showCoordsModal) {
-                CoordsInputModal(
-                    errorMessage = uiState.modalErrorMessage,
-                    onDismiss = onDismissCoordsModal,
-                    onSubmit = onSubmitCoords
-                )
-            }
-
-            if (uiState.showCityModal) {
-                CityInputModal(
-                    isLoading = uiState.isModalLoading,
-                    errorMessage = uiState.modalErrorMessage,
-                    onDismiss = onDismissCityModal,
-                    onSubmit = onSubmitCityQuery
-                )
             }
         }
     }
