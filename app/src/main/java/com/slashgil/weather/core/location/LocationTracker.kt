@@ -8,9 +8,9 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.slashgil.weather.domain.model.Coordinates
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
-import kotlin.coroutines.resume
 
 interface LocationTracker {
     suspend fun getCurrentLocation(): Coordinates?
@@ -36,38 +36,30 @@ class DefaultLocationTracker @Inject constructor(
             return null
         }
 
-        return suspendCancellableCoroutine { continuation ->
-            locationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    continuation.resume(Coordinates(location.latitude, location.longitude))
-                } else {
-                    requestFreshLocation(continuation)
-                }
-            }.addOnFailureListener {
-                requestFreshLocation(continuation)
+        return try {
+            // 1. Try cached last known location with 2s timeout
+            val lastLoc = withTimeoutOrNull(2000) {
+                locationClient.lastLocation.await()
             }
-        }
-    }
+            if (lastLoc != null) {
+                return Coordinates(lastLoc.latitude, lastLoc.longitude)
+            }
 
-    private fun requestFreshLocation(
-        continuation: kotlin.coroutines.Continuation<Coordinates?>
-    ) {
-        val cts = CancellationTokenSource()
-        try {
-            locationClient.getCurrentLocation(
-                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                cts.token
-            ).addOnSuccessListener { freshLocation ->
-                if (freshLocation != null) {
-                    continuation.resume(Coordinates(freshLocation.latitude, freshLocation.longitude))
-                } else {
-                    continuation.resume(null)
-                }
-            }.addOnFailureListener {
-                continuation.resume(null)
+            // 2. Try active location fix with 5s timeout
+            val freshLoc = withTimeoutOrNull(5000) {
+                val cts = CancellationTokenSource()
+                locationClient.getCurrentLocation(
+                    Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                    cts.token
+                ).await()
             }
-        } catch (e: SecurityException) {
-            continuation.resume(null)
+            if (freshLoc != null) {
+                Coordinates(freshLoc.latitude, freshLoc.longitude)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 }

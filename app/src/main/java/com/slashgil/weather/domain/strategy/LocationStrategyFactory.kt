@@ -1,11 +1,13 @@
 package com.slashgil.weather.domain.strategy
 
+import android.app.Application
 import com.slashgil.weather.core.location.LocationTracker
 import com.slashgil.weather.domain.model.ABTestFlag
 import javax.inject.Inject
 
 class LocationStrategyFactory @Inject constructor(
-    private val locationTracker: LocationTracker
+    private val locationTracker: LocationTracker,
+    private val application: Application
 ) {
     fun createStrategy(abTests: List<ABTestFlag>): LocationResolutionStrategy {
         val putDefaultCity = abTests.find { it.name == "put_default_city" }?.value == true
@@ -16,7 +18,7 @@ class LocationStrategyFactory @Inject constructor(
             putDefaultCity -> DefaultCityStrategy()
             giveCoords -> ManualCoordsStrategy()
             selectCity -> ManualCityStrategy()
-            else -> DeviceGpsStrategy(locationTracker)
+            else -> DeviceGpsStrategy(locationTracker, application)
         }
     }
 }

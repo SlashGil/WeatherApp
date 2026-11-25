@@ -21,6 +21,7 @@ class RefreshWeeklyForecastUseCaseTest {
 
     private val weatherRepository: WeatherRepository = mockk()
     private val locationTracker: LocationTracker = mockk()
+    private val application: android.app.Application = mockk(relaxed = true)
     private lateinit var locationStrategyFactory: LocationStrategyFactory
     private lateinit var useCase: RefreshWeeklyForecastUseCase
 
@@ -46,7 +47,7 @@ class RefreshWeeklyForecastUseCaseTest {
 
     @Before
     fun setUp() {
-        locationStrategyFactory = LocationStrategyFactory(locationTracker)
+        locationStrategyFactory = LocationStrategyFactory(locationTracker, application)
         useCase = RefreshWeeklyForecastUseCase(weatherRepository, locationStrategyFactory)
     }
 
@@ -118,7 +119,7 @@ class RefreshWeeklyForecastUseCaseTest {
             weatherRepository.refreshForecast(
                 latitude = gpsCoords.latitude,
                 longitude = gpsCoords.longitude,
-                cityName = null
+                cityName = any()
             )
         } returns Result.success(mockWeeklyForecast)
 
@@ -127,7 +128,7 @@ class RefreshWeeklyForecastUseCaseTest {
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) { locationTracker.getCurrentLocation() }
         coVerify(exactly = 1) {
-            weatherRepository.refreshForecast(gpsCoords.latitude, gpsCoords.longitude, null)
+            weatherRepository.refreshForecast(gpsCoords.latitude, gpsCoords.longitude, any())
         }
     }
 }
