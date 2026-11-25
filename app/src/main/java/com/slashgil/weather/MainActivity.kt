@@ -4,6 +4,7 @@ import android.Manifest
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -48,14 +49,27 @@ class MainActivity : ComponentActivity() {
         }
         splashScreen.setKeepOnScreenCondition { !isReady }
 
-        splashScreen.setOnExitAnimationListener { splashScreenView ->
-            val fadeOut = ObjectAnimator.ofFloat(splashScreenView.view, View.ALPHA, 1f, 0f)
-            AnimatorSet().apply {
-                duration = 350L
-                interpolator = AccelerateDecelerateInterpolator()
-                playTogether(fadeOut)
-                doOnEnd { splashScreenView.remove() }
-                start()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            this.splashScreen.setOnExitAnimationListener { platformView ->
+                val fadeOut = ObjectAnimator.ofFloat(platformView, View.ALPHA, 1f, 0f)
+                AnimatorSet().apply {
+                    duration = 350L
+                    interpolator = AccelerateDecelerateInterpolator()
+                    playTogether(fadeOut)
+                    doOnEnd { platformView.remove() }
+                    start()
+                }
+            }
+        } else {
+            splashScreen.setOnExitAnimationListener { splashScreenView ->
+                val fadeOut = ObjectAnimator.ofFloat(splashScreenView.view, View.ALPHA, 1f, 0f)
+                AnimatorSet().apply {
+                    duration = 350L
+                    interpolator = AccelerateDecelerateInterpolator()
+                    playTogether(fadeOut)
+                    doOnEnd { splashScreenView.remove() }
+                    start()
+                }
             }
         }
 
