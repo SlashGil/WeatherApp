@@ -5,6 +5,8 @@ import android.app.Application
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.slashgil.weather.domain.model.Coordinates
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
@@ -39,13 +41,33 @@ class DefaultLocationTracker @Inject constructor(
                 if (location != null) {
                     continuation.resume(Coordinates(location.latitude, location.longitude))
                 } else {
+                    requestFreshLocation(continuation)
+                }
+            }.addOnFailureListener {
+                requestFreshLocation(continuation)
+            }
+        }
+    }
+
+    private fun requestFreshLocation(
+        continuation: kotlin.coroutines.Continuation<Coordinates?>
+    ) {
+        val cts = CancellationTokenSource()
+        try {
+            locationClient.getCurrentLocation(
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                cts.token
+            ).addOnSuccessListener { freshLocation ->
+                if (freshLocation != null) {
+                    continuation.resume(Coordinates(freshLocation.latitude, freshLocation.longitude))
+                } else {
                     continuation.resume(null)
                 }
             }.addOnFailureListener {
                 continuation.resume(null)
-            }.addOnCanceledListener {
-                continuation.cancel()
             }
+        } catch (e: SecurityException) {
+            continuation.resume(null)
         }
     }
 }

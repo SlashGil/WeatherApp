@@ -2,6 +2,7 @@ package com.slashgil.weather
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.slashgil.weather.presentation.main.WeatherScreen
 import com.slashgil.weather.presentation.main.WeatherViewModel
@@ -65,6 +67,23 @@ class MainActivity : ComponentActivity() {
                     onDismissError = { viewModel.dismissErrorMessage() }
                 )
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val hasFine = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val hasCoarse = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFine || hasCoarse) {
+            viewModel.refreshForecast()
         }
     }
 }
