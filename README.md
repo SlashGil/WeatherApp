@@ -11,6 +11,9 @@ A native Android application built in **Kotlin** displaying a **7-day daily weat
 - **Non-Blocking Refresh Errors:** When cached data exists and a network refresh fails, the cached forecast stays visible on screen while a non-blocking `Snackbar` alerts the user.
 - **GPS Location & Fallback:** Reads device location via `FusedLocationProviderClient`. Falls back gracefully to default city (**New York, NY: `40.7128, -74.0060`**) when location permissions are denied or unavailable.
 - **Pull-to-Refresh Gesture:** Supports intuitive drag/swipe-down gesture on the forecast screen to trigger refresh.
+- **Custom Adaptive App Icon & Animated Splash Screen:**
+  - Adaptive launcher icon featuring a midnight-to-sky gradient background and golden sun/cloud vector foreground.
+  - Modern splash screen powered by Jetpack `androidx.core:core-splashscreen` holding on launch until initial Room cache state emits, followed by a smooth scale-up (`1.2x`) and alpha fade-out exit animation.
 - **Hidden Developer Mode & A/B Testing:**
   - Double-tapping the helper text on the **Empty State screen** activates **Developer Mode** and reveals a **Gear Icon (`Settings`)** in the `TopAppBar`.
   - Tapping the Gear Icon opens a dedicated `SettingsActivity` backed by Room A/B test flags (`put_default_city`, `give_coords`, `select_city`).
